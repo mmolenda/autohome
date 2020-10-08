@@ -20,9 +20,12 @@ ReadTemperature = namedtuple('ReadTemperature', ['label', 'value'])
 class AutoHome:
     def __init__(self):
         GPIO.setmode(GPIO.BCM)
+        self.SLEEP_ENTRANCE = 3
+        self.SLEEP_GATE = 0.5
         self.RELAY_1_GATE = 18
         self.RELAY_2_ENTRANCE = 23
         self.RELAY_3_HEATING = 24
+        self.RELAY_4 = 25
         self.DC_SENSOR_PATH = '/sys/bus/w1/devices/{}/w1_slave'
         self.DC_SENSORS = (
             DCSensor(id='28-8a20285896ff', label='Zewnątrz', correction=1),
@@ -34,7 +37,7 @@ class AutoHome:
     def command_gate(self):
         self._print('Otwieram lub zamykam bramę')
         GPIO.setup(self.RELAY_1_GATE, GPIO.OUT, initial=GPIO.LOW)
-        self._sleep(0.5)
+        self._sleep(self.SLEEP_GATE)
         GPIO.output(self.RELAY_1_GATE, GPIO.HIGH)
         self._print('OK')
         GPIO.cleanup()
@@ -42,7 +45,7 @@ class AutoHome:
     def command_entrance(self):
         self._print('Otwieram furtkę')
         GPIO.setup(self.RELAY_2_ENTRANCE, GPIO.OUT, initial=GPIO.LOW)
-        self._sleep(3)
+        self._sleep(self.SLEEP_ENTRANCE)
         GPIO.output(self.RELAY_2_ENTRANCE, GPIO.HIGH)
         self._print('Zamykam')
         GPIO.cleanup()
