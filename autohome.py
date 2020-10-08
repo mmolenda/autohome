@@ -32,41 +32,41 @@ class AutoHome:
         )
 
     def command_gate(self):
-        print('Otwieram lub zamykam bramę')
+        self._print('Otwieram lub zamykam bramę')
         GPIO.setup(self.RELAY_1_GATE, GPIO.OUT, initial=GPIO.LOW)
         self._sleep(0.5)
         GPIO.output(self.RELAY_1_GATE, GPIO.HIGH)
-        print('OK')
+        self._print('OK')
         GPIO.cleanup()
 
     def command_entrance(self):
-        print('Otwieram furtkę')
+        self._print('Otwieram furtkę')
         GPIO.setup(self.RELAY_2_ENTRANCE, GPIO.OUT, initial=GPIO.LOW)
         self._sleep(3)
         GPIO.output(self.RELAY_2_ENTRANCE, GPIO.HIGH)
-        print('Zamykam')
+        self._print('Zamykam')
         GPIO.cleanup()
 
     def command_heatingoff(self):
-        print('Kocioł w trybie antryfreeze')
+        self._print('Kocioł w trybie antryfreeze')
         GPIO.setup(self.RELAY_3_HEATING, GPIO.OUT, initial=GPIO.LOW)
-        print('OK')
+        self._print('OK')
 
     def command_heatingon(self):
-        print('Kocioł w trybie normalnym')
+        self._print('Kocioł w trybie normalnym')
         GPIO.setup(self.RELAY_3_HEATING, GPIO.OUT, initial=GPIO.HIGH)
-        print('OK')
+        self._print('OK')
         GPIO.cleanup()
 
     def command_temperature(self):
         for temperature in self._get_temperatures():
             value = f'{temperature.value}°C' if temperature.value else '-'
-            print(f'{temperature.label}: {value}')
+            self._print(f'{temperature.label}: {value}')
 
     def command_temperature_csv(self):
         line = [datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')]
         line.extend(i.value or '' for i in self._get_temperatures())
-        print(','.join([str(i) for i in line]))
+        self._print(','.join([str(i) for i in line]))
 
     def _get_temperatures(self):
         for dc_sensor in self.DC_SENSORS:
@@ -80,12 +80,15 @@ class AutoHome:
             finally:
                 yield ReadTemperature(label=dc_sensor.label, value=temperature)
 
+    def _print(self, message):
+        print(message, flush=True)
+
     def _sleep(self, seconds):
         if seconds <= 1:
             time.sleep(seconds)
         else:
             for i in reversed(range(1, int(seconds) + 1)):
-                print(f'{i}...')
+                self._print(f'{i}...')
                 time.sleep(1)
 
 
