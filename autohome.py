@@ -67,7 +67,8 @@ class AutoHome:
             self._print(f'{temperature.label}: {value}')
 
     def command_temperature_csv(self):
-        line = [datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')]
+        now = datetime.now()
+        line = [datetime.strftime(now, '%Y-%m-%d %H:%M:%S'), datetime.strftime(now, '%s')]
         line.extend(i.value or '' for i in self._get_temperatures())
         self._print(','.join([str(i) for i in line]))
 
