@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 import argparse
 import logging
@@ -20,12 +21,13 @@ ReadTemperature = namedtuple('ReadTemperature', ['label', 'value'])
 class AutoHome:
     def __init__(self):
         GPIO.setmode(GPIO.BCM)
-        self.SLEEP_ENTRANCE = 3
+        self.SLEEP_ENTRANCE = 4
         self.SLEEP_GATE = 0.5
+        self.SLEEP_GARAGE = 2 
         self.RELAY_1_GATE = 18
         self.RELAY_2_ENTRANCE = 23
         self.RELAY_3_HEATING = 24
-        self.RELAY_4 = 25
+        self.RELAY_4_GARAGE = 25
         self.DC_SENSOR_PATH = '/sys/bus/w1/devices/{}/w1_slave'
         self.DC_SENSORS = (
             DCSensor(id='28-8a20285896ff', label='Zewnątrz', correction=1),
@@ -48,6 +50,14 @@ class AutoHome:
         self._sleep(self.SLEEP_ENTRANCE)
         GPIO.output(self.RELAY_2_ENTRANCE, GPIO.HIGH)
         self._print('Zamykam')
+        GPIO.cleanup()
+
+    def command_garage(self):
+        self._print('Otwieram lub zamykam garaż')
+        GPIO.setup(self.RELAY_4_GARAGE, GPIO.OUT, initial=GPIO.LOW)
+        self._sleep(self.SLEEP_GARAGE)
+        GPIO.output(self.RELAY_4_GARAGE, GPIO.HIGH)
+        self._print('OK')
         GPIO.cleanup()
 
     def command_heatingoff(self):
