@@ -33,7 +33,8 @@ class AutoHome:
             DCSensor(id='28-8a20285896ff', label='Zewnątrz', correction=1),
             DCSensor(id='28-03199779455d', label='Parter', correction=1.06),
             DCSensor(id='28-03179779ca7d', label='Piętro', correction=1.06),
-            DCSensor(id='28-031897792d45', label='Piwnica', correction=1.06)
+            DCSensor(id='28-031897792d45', label='Piwnica', correction=1.06),
+            DCSensor(id='28-03199779139e', label='Strych', correction=1.06)
         )
 
     def command_gate(self):
