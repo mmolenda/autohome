@@ -27,7 +27,7 @@ ReadTemperature = namedtuple('ReadTemperature', ['label', 'value'])
 class AutoHome:
     def __init__(self):
         config = configparser.ConfigParser()
-        config.read(os.path.join(HERE, 'integra.ini'))
+        config.read(os.path.join(HERE, '..', 'integra.ini'))
         self.integra = Integra(config['Integra']['pin'], config['Integra']['host'])
         GPIO.setmode(GPIO.BCM)
         self.SLEEP_ENTRANCE = 4
