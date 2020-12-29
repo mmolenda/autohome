@@ -2,13 +2,18 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import configparser
 import logging
+import os
 import sys
 import time
 from collections import namedtuple
 from datetime import datetime
 import RPi.GPIO as GPIO
+from IntegraPy import Integra
 
+
+HERE = os.path.abspath(os.path.dirname(__file__))
 COMMAND = 'command'
 sys.stdout.flush()
 log = logging.getLogger(__name__)
@@ -20,14 +25,22 @@ ReadTemperature = namedtuple('ReadTemperature', ['label', 'value'])
 
 class AutoHome:
     def __init__(self):
+        config = configparser.ConfigParser()
+        config.read(os.path.join(HERE, 'integra.ini'))
+        self.integra = Integra(config['Integra']['pin'], config['Integra']['host'])
         GPIO.setmode(GPIO.BCM)
         self.SLEEP_ENTRANCE = 4
         self.SLEEP_GATE = 0.5
-        self.SLEEP_GARAGE = 2 
+        self.SLEEP_GARAGE = 2
         self.RELAY_1_GATE = 18
         self.RELAY_2_ENTRANCE = 23
         self.RELAY_3_HEATING = 24
         self.RELAY_4_GARAGE = 25
+        self.ALARM_ZONE_GARAGE = 8
+        self.ALARM_ZONES = {
+            self.ALARM_ZONE_GARAGE: 'Garaż brama',
+            9: 'Garaż drzwi'
+        }
         self.DC_SENSOR_PATH = '/sys/bus/w1/devices/{}/w1_slave'
         self.DC_SENSORS = (
             DCSensor(id='28-8a20285896ff', label='Zewnątrz', correction=1),
@@ -53,13 +66,23 @@ class AutoHome:
         self._print('Zamykam')
         GPIO.cleanup()
 
-    def command_garage(self):
-        self._print('Otwieram lub zamykam garaż')
+    def command_garage(self, opened=None):
+        if opened is None:
+            opened = self._is_garage_open()
+        self._print('{} garaż'.format('Zamykam' if opened else 'Otwieram'))
         GPIO.setup(self.RELAY_4_GARAGE, GPIO.OUT, initial=GPIO.LOW)
         self._sleep(self.SLEEP_GARAGE)
         GPIO.output(self.RELAY_4_GARAGE, GPIO.HIGH)
         self._print('OK')
         GPIO.cleanup()
+
+    def command_garage_close(self):
+        opened = self._is_garage_open()
+        if opened:
+            self.command_garage(opened=opened)
+
+    def _is_garage_open(self):
+        return 8 in self.integra.get_violated_zones()
 
     def command_heatingoff(self):
         self._print('Kocioł w trybie antryfreeze')
@@ -71,6 +94,12 @@ class AutoHome:
         GPIO.setup(self.RELAY_3_HEATING, GPIO.OUT, initial=GPIO.HIGH)
         self._print('OK')
         GPIO.cleanup()
+
+    def command_violated_zones(self):
+        self._print(self.integra.get_time())
+        violated_zones = self.integra.get_violated_zones()
+        for zone_id, zone_name in self.ALARM_ZONES.items():
+            self._print('{} [{}]'.format(zone_name, '*' if zone_id in violated_zones else ' '))
 
     def command_temperature(self):
         for temperature in self._get_temperatures():
@@ -117,7 +146,7 @@ if __name__ == '__main__':
         stream=sys.stdout,
         level={0: logging.WARNING, 1: logging.INFO, 2: logging.DEBUG}.get(args.verbose, logging.DEBUG),
         format='%(asctime)s %(levelname)s: %(message)s')
+    logging.getLogger('IntegraPy').setLevel(logging.CRITICAL)
 
     autohome = AutoHome()
     getattr(autohome, f'{COMMAND}_{getattr(args, COMMAND)}')()
-
