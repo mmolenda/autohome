@@ -7,11 +7,12 @@ import logging
 import os
 import sys
 import time
+from datetime import datetime
 from collections import namedtuple
 from datetime import datetime
 import RPi.GPIO as GPIO
 from IntegraPy import Integra
-
+from suntime import Sun
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 COMMAND = 'command'
@@ -49,6 +50,7 @@ class AutoHome:
             DCSensor(id='28-031897792d45', label='Piwnica', correction=1.06),
             DCSensor(id='28-03199779139e', label='Strych', correction=1.06)
         )
+        self.COORDINATES = (51.21, 21.01)  # Warsaw, PL
 
     def command_gate(self):
         self._print('Otwieram lub zamykam bramę')
@@ -78,11 +80,15 @@ class AutoHome:
 
     def command_garage_close(self):
         opened = self._is_garage_open()
-        if opened:
+        if self._is_after_sunset() and opened:
             self.command_garage(opened=opened)
 
     def _is_garage_open(self):
         return 8 in self.integra.get_violated_zones()
+
+    def _is_after_sunset(self):
+        sun = Sun(*self.COORDINATES)
+        return datetime.utcnow() > sun.get_sunset_time()
 
     def command_heatingoff(self):
         self._print('Kocioł w trybie antryfreeze')
