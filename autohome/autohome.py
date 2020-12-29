@@ -88,7 +88,8 @@ class AutoHome:
 
     def _is_after_sunset(self):
         sun = Sun(*self.COORDINATES)
-        return datetime.utcnow() > sun.get_sunset_time()
+        ss = sun.get_sunset_time()
+        return datetime.utcnow() > datetime(ss.year, ss.month, ss.day, ss.hour, ss.minute)
 
     def command_heatingoff(self):
         self._print('Kocioł w trybie antryfreeze')
