@@ -39,21 +39,21 @@ class AutoHome:
         self.RELAY_4_GARAGE = 25
         self.ALARM_ZONE_GARAGE = 8
         self.ALARM_ZONES = {
-            self.ALARM_ZONE_GARAGE: 'Garaż brama',
-            9: 'Garaż drzwi'
+            self.ALARM_ZONE_GARAGE: 'Garaz brama',
+            9: 'Garaz drzwi'
         }
         self.DC_SENSOR_PATH = '/sys/bus/w1/devices/{}/w1_slave'
         self.DC_SENSORS = (
-            DCSensor(id='28-8a20285896ff', label='Zewnątrz', correction=1),
+            DCSensor(id='28-8a20285896ff', label='Zewnatrz', correction=1),
             DCSensor(id='28-03199779455d', label='Parter', correction=1.06),
-            DCSensor(id='28-03179779ca7d', label='Piętro', correction=1.06),
+            DCSensor(id='28-03179779ca7d', label='Pietro', correction=1.06),
             DCSensor(id='28-031897792d45', label='Piwnica', correction=1.06),
             DCSensor(id='28-03199779139e', label='Strych', correction=1.06)
         )
         self.COORDINATES = (51.21, 21.01)  # Warsaw, PL
 
     def command_gate(self):
-        self._print('Otwieram lub zamykam bramę')
+        self._print('Otwieram lub zamykam brame')
         GPIO.setup(self.RELAY_1_GATE, GPIO.OUT, initial=GPIO.LOW)
         self._sleep(self.SLEEP_GATE)
         GPIO.output(self.RELAY_1_GATE, GPIO.HIGH)
@@ -61,7 +61,7 @@ class AutoHome:
         GPIO.cleanup()
 
     def command_entrance(self):
-        self._print('Otwieram furtkę')
+        self._print('Otwieram furtke')
         GPIO.setup(self.RELAY_2_ENTRANCE, GPIO.OUT, initial=GPIO.LOW)
         self._sleep(self.SLEEP_ENTRANCE)
         GPIO.output(self.RELAY_2_ENTRANCE, GPIO.HIGH)
@@ -70,8 +70,13 @@ class AutoHome:
 
     def command_garage(self, opened=None):
         if opened is None:
-            opened = self._is_garage_open()
-        self._print('{} garaż'.format('Zamykam' if opened else 'Otwieram'))
+            try:
+                opened = self._is_garage_open()
+            except ConnectionRefusedError as e:
+                self._print('Nie mozna sprawdzic stanu bramy garazu.')
+                self._print('Otwieram lub zamykam garaz.')
+            else:
+                self._print('{} garaz'.format('Zamykam' if opened else 'Otwieram'))
         GPIO.setup(self.RELAY_4_GARAGE, GPIO.OUT, initial=GPIO.LOW)
         self._sleep(self.SLEEP_GARAGE)
         GPIO.output(self.RELAY_4_GARAGE, GPIO.HIGH)
@@ -79,12 +84,17 @@ class AutoHome:
         GPIO.cleanup()
 
     def command_garage_close(self):
-        opened = self._is_garage_open()
-        if self._is_after_sunset() and opened:
-            self.command_garage(opened=opened)
+        try:
+            opened = self._is_garage_open()
+        except ConnectionRefusedError as e:
+            self._print('Nie mozna sprawdzic stanu bramy garazu. Nie zamykam.')
+        else:
+            if self._is_after_sunset() and opened is True:
+                self.command_garage(opened=opened)
 
     def _is_garage_open(self):
-        return 8 in self.integra.get_violated_zones()
+        ConnectionRefusedError
+        return self.ALARM_ZONE_GARAGE in self.integra.get_violated_zones()
 
     def _is_after_sunset(self):
         sun = Sun(*self.COORDINATES)
@@ -92,12 +102,12 @@ class AutoHome:
         return datetime.utcnow() > datetime(ss.year, ss.month, ss.day, ss.hour, ss.minute)
 
     def command_heatingoff(self):
-        self._print('Kocioł w trybie antryfreeze')
+        self._print('Kociol w trybie antryfreeze')
         GPIO.setup(self.RELAY_3_HEATING, GPIO.OUT, initial=GPIO.LOW)
         self._print('OK')
 
     def command_heatingon(self):
-        self._print('Kocioł w trybie normalnym')
+        self._print('Kociol w trybie normalnym')
         GPIO.setup(self.RELAY_3_HEATING, GPIO.OUT, initial=GPIO.HIGH)
         self._print('OK')
         GPIO.cleanup()
@@ -125,8 +135,11 @@ class AutoHome:
                 with open(self.DC_SENSOR_PATH.format(dc_sensor.id)) as fh:
                     raw_temperature = fh.readlines()[-1].strip().split('=')[1]
                     temperature = round(int(raw_temperature) * dc_sensor.correction / 1000, 1)
+                    if temperature > 60:
+                        log.warn(f'Temp powyzej 60 st: {dc_sensor.label}')
+                        temperature = None
             except (FileNotFoundError, IndexError, ValueError) as e:
-                log.error(f'Nie można odczytać temperatury dla: {dc_sensor.label}. {e}')
+                log.error(f'Nie można odczytc temperatury dla: {dc_sensor.label}. {e}')
                 temperature = None
             finally:
                 yield ReadTemperature(label=dc_sensor.label, value=temperature)
@@ -150,7 +163,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     logging.basicConfig(
-        stream=sys.stdout,
+        stream=sys.stderr,
         level={0: logging.WARNING, 1: logging.INFO, 2: logging.DEBUG}.get(args.verbose, logging.DEBUG),
         format='%(asctime)s %(levelname)s: %(message)s')
     logging.getLogger('IntegraPy').setLevel(logging.CRITICAL)
