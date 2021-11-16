@@ -72,7 +72,7 @@ class AutoHome:
         if opened is None:
             try:
                 opened = self._is_garage_open()
-            except ConnectionRefusedError as e:
+            except (ConnectionRefusedError, OSError) as e:
                 self._print('Nie mozna sprawdzic stanu bramy garazu.')
                 self._print('Otwieram lub zamykam garaz.')
             else:
@@ -86,14 +86,13 @@ class AutoHome:
     def command_garage_close(self):
         try:
             opened = self._is_garage_open()
-        except ConnectionRefusedError as e:
+        except (ConnectionRefusedError, IOError) as e:
             self._print('Nie mozna sprawdzic stanu bramy garazu. Nie zamykam.')
         else:
             if self._is_after_sunset() and opened is True:
                 self.command_garage(opened=opened)
 
     def _is_garage_open(self):
-        ConnectionRefusedError
         return self.ALARM_ZONE_GARAGE in self.integra.get_violated_zones()
 
     def _is_after_sunset(self):
