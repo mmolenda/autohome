@@ -10,3 +10,7 @@ def autohome(action: str):
         return getattr(ah, f'command_{action}')()
     except AttributeError:
         return {}, 404
+
+
+if __name__ == '__main__':
+    app.run()
