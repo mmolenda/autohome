@@ -53,41 +53,31 @@ class AutoHome:
         self.COORDINATES = (51.21, 21.01)  # Warsaw, PL
 
     def command_gate(self):
-        self._print('Otwieram lub zamykam brame')
         GPIO.setup(self.RELAY_1_GATE, GPIO.OUT, initial=GPIO.LOW)
         self._sleep(self.SLEEP_GATE)
         GPIO.output(self.RELAY_1_GATE, GPIO.HIGH)
-        self._print('OK')
         GPIO.cleanup()
+        return 'Otwieram lub zamykam brame'
 
     def command_entrance(self):
-        self._print('Otwieram furtke')
         GPIO.setup(self.RELAY_2_ENTRANCE, GPIO.OUT, initial=GPIO.LOW)
         self._sleep(self.SLEEP_ENTRANCE)
         GPIO.output(self.RELAY_2_ENTRANCE, GPIO.HIGH)
-        self._print('Zamykam')
         GPIO.cleanup()
+        return 'Otwieram furtke'
 
     def command_garage(self, opened=None):
-        if opened is None:
-            try:
-                opened = self._is_garage_open()
-            except (ConnectionRefusedError, OSError) as e:
-                self._print('Nie mozna sprawdzic stanu bramy garazu.')
-                self._print('Otwieram lub zamykam garaz.')
-            else:
-                self._print('{} garaz'.format('Zamykam' if opened else 'Otwieram'))
         GPIO.setup(self.RELAY_4_GARAGE, GPIO.OUT, initial=GPIO.LOW)
         self._sleep(self.SLEEP_GARAGE)
         GPIO.output(self.RELAY_4_GARAGE, GPIO.HIGH)
-        self._print('OK')
         GPIO.cleanup()
+        return 'Otwieram lub zamykam garaz.'
 
     def command_garage_close(self):
         try:
             opened = self._is_garage_open()
         except (ConnectionRefusedError, IOError) as e:
-            self._print('Nie mozna sprawdzic stanu bramy garazu. Nie zamykam.')
+            return 'Nie mozna sprawdzic stanu bramy garazu. Nie zamykam.'
         else:
             if self._is_after_sunset() and opened is True:
                 self.command_garage(opened=opened)
@@ -101,32 +91,35 @@ class AutoHome:
         return datetime.utcnow() > datetime(ss.year, ss.month, ss.day, ss.hour, ss.minute)
 
     def command_heatingoff(self):
-        self._print('Kociol w trybie antryfreeze')
         GPIO.setup(self.RELAY_3_HEATING, GPIO.OUT, initial=GPIO.LOW)
-        self._print('OK')
+        return 'Kociol w trybie antryfreeze'
 
     def command_heatingon(self):
-        self._print('Kociol w trybie normalnym')
         GPIO.setup(self.RELAY_3_HEATING, GPIO.OUT, initial=GPIO.HIGH)
-        self._print('OK')
         GPIO.cleanup()
+        return 'Kociol w trybie normalnym'
 
     def command_violated_zones(self):
-        self._print(self.integra.get_time())
+        retval = []
         violated_zones = self.integra.get_violated_zones()
         for zone_id, zone_name in self.ALARM_ZONES.items():
-            self._print('{} [{}]'.format(zone_name, '*' if zone_id in violated_zones else ' '))
+            retval.append('{} [{}]'.format(zone_name, '*' if zone_id in violated_zones else ' '))
+        return '\n'.join(retval)
 
     def command_temperature(self):
+        retval = []
         for temperature in self._get_temperatures():
             value = f'{temperature.value}°C' if temperature.value else '-'
-            self._print(f'{temperature.label}: {value}')
+            retval.append(f'{temperature.label}: {value}')
+        return '\n'.join(retval)
 
     def command_temperature_csv(self):
+        retval = []
         now = datetime.now()
         line = [datetime.strftime(now, '%Y-%m-%d %H:%M:%S'), datetime.strftime(now, '%s')]
         line.extend(i.value or '' for i in self._get_temperatures())
-        self._print(','.join([str(i) for i in line]))
+        retval.append(','.join([str(i) for i in line]))
+        return '\n'.join(retval)
 
     def _get_temperatures(self):
         for dc_sensor in self.DC_SENSORS:
@@ -168,4 +161,4 @@ if __name__ == '__main__':
     logging.getLogger('IntegraPy').setLevel(logging.CRITICAL)
 
     autohome = AutoHome()
-    getattr(autohome, f'{COMMAND}_{getattr(args, COMMAND)}')()
+    print(getattr(autohome, f'{COMMAND}_{getattr(args, COMMAND)}')())
