@@ -2,11 +2,11 @@ from flask import Flask
 from autohome import autohome
 
 app = Flask(__name__)
-ah = autohome.AutoHome()
 
 @app.route('/ah/<action>', methods=['POST'])
-def autohome(action: str):
+def ah(action: str):
     try:
+        ah = autohome.AutoHome()
         return getattr(ah, f'command_{action}')()
     except AttributeError:
         return {}, 404
